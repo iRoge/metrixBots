@@ -25,16 +25,25 @@ async function analizeSites() {
 
     const workbook = new xl.Workbook();
     await workbook.xlsx.readFile('file.xlsx');
-    let worksheet = workbook.getWorksheet(1);
 
-    let urlRow = 4;
-    let siteUrl = worksheet.getCell(urlRow,3).toString();
-
-    while (siteUrl) {
-        await page.goto(siteUrl);
-        await page.waitFor(3000);
-        urlRow++;
-        siteUrl = worksheet.getCell(urlRow,3).toString();
+    const urlToParseColumn = 4;
+    const urlToParseRow = 2;
+    const startRow = 6;
+    let i = 1;
+    let worksheet = workbook.getWorksheet(i);
+    while (worksheet) {
+        let urlToParse = worksheet.getCell(urlToParseRow,urlToParseColumn).toString();
+        if (!urlToParse) {
+            console.log('Страница ' + worksheet.name + ' не имеет url страницы парсинга');
+        }
+        console.log(worksheet.getRows(1, 1));
+        worksheet.insertRows();
+        let currentRow = startRow + i * 7;
+        worksheet.getCell(currentRow,1).value = 'ЕЖЕМЕСЯЧНО МЕНЯЮЩИЕСЯ ДАННЫЕ';
+        i++;
+        worksheet = workbook.getWorksheet(i);
     }
+
+
 
 }
