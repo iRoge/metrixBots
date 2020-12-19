@@ -104,4 +104,9 @@ dist
 .tern-port
 
 /vendor/
+
 .idea/*.xml
+
+.idea/codeStyles
+
+.idea/*.iml
