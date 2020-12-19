@@ -9,6 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.21.0",
+    "excel4node": "^1.7.2",
+    "exceljs": "^4.2.0",
     "puppeteer": "^5.5.0"
   }
 }

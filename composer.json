@@ -1,0 +1,13 @@
+{
+    "name": "iroge/metrix-sites-statistics",
+    "authors": [
+        {
+            "name": "iRoge",
+            "email": "45058118+iRoge@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.2",
+        "ext-rar": "^4.0"
+    }
+}
