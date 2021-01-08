@@ -7,9 +7,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 require_once 'vendor/autoload.php';
 set_time_limit(1000000);
 
-$collectedData = $_GET['collectedData'];
-var_dump($collectedData);
-//die();
+$collectedData = $_POST['collectedData'];
+
 $spreadsheet = IOFactory::load('file.xlsx');
 $heightOfDateRow = 7;
 $startRow = 6;
@@ -71,7 +70,10 @@ while ($worksheet) {
 
     // Top Referring Sites Block
     if (!empty($thisSitesData['topReferringSitesInfo'])) {
-        for ($column = 'DX', $i = 0; $column != 'EH' || $i != count($thisSitesData['topReferringSitesInfo']) || $i != 5; $column++, $column++, $i++) {
+        for ($column = 'DX', $i = 0; $column != 'EH'; $column++, $column++, $i++) {
+            if (!isset($thisSitesData['topReferringSitesInfo'][$i]) || $i >= 5) {
+                break;
+            }
             $currentColumn = $column;
             $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$i]['siteName']);
             $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$i]['difference']);
@@ -81,11 +83,14 @@ while ($worksheet) {
     }
     // Top Destination Sites Block
     if (!empty($thisSitesData['topDestinationSitesInfo'])) {
-        for ($column = 'EH', $i = 0; $column != 'ER' || $i != count($thisSitesData['topDestinationSitesInfo']) || $i != 5; $column++, $column++, $i++) {
+        for ($column = 'EH', $i = 0; $column != 'ER' || isset($thisSitesData['topDestinationSitesInfo'][$i]) || $i != 5; $column++, $column++, $i++) {
+            if (!isset($thisSitesData['topDestinationSitesInfo'][$i]) || $i >= 5) {
+                break;
+            }
             $currentColumn = $column;
-            $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$i]['siteName']);
-            $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$i]['difference']);
-            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['topReferringSitesInfo'][$i]['percent']);
+            $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topDestinationSitesInfo'][$i]['siteName']);
+            $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topDestinationSitesInfo'][$i]['difference']);
+            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['topDestinationSitesInfo'][$i]['percent']);
         }
     }
 
@@ -93,7 +98,10 @@ while ($worksheet) {
     $worksheet->setCellValue('ER' . ($currentRow + 2), $thisSitesData['organicSearchPercent']);
     // Organic Search Block
     if (!empty($thisSitesData['organicSearchInfo'])) {
-        for ($column = 'ER', $i = 0; $column != 'FB' || $i != count($thisSitesData['organicSearchInfo']) || $i != 5; $column++, $column++, $i++) {
+        for ($column = 'ER', $i = 0; $column != 'FB'; $column++, $column++, $i++) {
+            if (!isset($thisSitesData['organicSearchInfo'][$i]) || $i >= 5) {
+                break;
+            }
             $currentColumn = $column;
             $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['organicSearchInfo'][$i]['searchText']);
             $worksheet->setCellValue(++$currentColumn . ($currentRow + 5), $thisSitesData['organicSearchInfo'][$i]['difference']);
@@ -103,7 +111,10 @@ while ($worksheet) {
 
     // Paid Search Block
     if (!empty($thisSitesData['paidSearchInfo'])) {
-        for ($column = 'FB', $i = 0; $column != 'FL' || $i != count($thisSitesData['paidSearchInfo']) || $i != 5; $column++, $column++, $i++) {
+        for ($column = 'FB', $i = 0; $column != 'FL'; $column++, $column++, $i++) {
+            if (!isset($thisSitesData['paidSearchInfo'][$i]) || $i >= 5) {
+                break;
+            }
             $currentColumn = $column;
             $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['paidSearchInfo'][$i]['searchText']);
             $worksheet->setCellValue(++$currentColumn . ($currentRow + 5), $thisSitesData['paidSearchInfo'][$i]['difference']);
@@ -119,6 +130,66 @@ while ($worksheet) {
         if (isset($thisSitesData['socialInfo'][strtolower($socialCell->getValue())])) {
             // Country cell percent
             $worksheet->setCellValue($column . ($currentRow + 3), $thisSitesData['socialInfo'][strtolower($socialCell->getValue())]['percent']);
+        }
+    }
+
+    // Audience Interests Block
+    if (!empty($thisSitesData['audienceInterestsInfo'])) {
+        for ($column = 'FS', $i = 0; $column != 'FX'; $column++, $i++) {
+            if (!isset($thisSitesData['audienceInterestsInfo'][$i]) || $i >= 5) {
+                break;
+            }
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['audienceInterestsInfo'][$i]);
+        }
+    }
+
+    // Also visited websites Block
+    if (!empty($thisSitesData['alsoVisitedWebsitesInfo'])) {
+        for ($column = 'FX', $i = 0; $column != 'GC'; $column++, $i++) {
+            if (!isset($thisSitesData['alsoVisitedWebsitesInfo'][$i]) || $i >= 5) {
+                break;
+            }
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['alsoVisitedWebsitesInfo'][$i]);
+        }
+    }
+
+    // Similarity Block
+    if (!empty($thisSitesData['similarSitesInfo'])) {
+        for ($column = 'GC', $i = 0; $column != 'GM'; $column++, $i++) {
+            if (!isset($thisSitesData['similarSitesInfo'][$i]) || $i >= 10) {
+                break;
+            }
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['similarSitesInfo'][$i]);
+        }
+    }
+
+    // Rank Block
+    if (!empty($thisSitesData['rankSitesInfo'])) {
+        for ($column = 'GM', $i = 0; $column != 'GW'; $column++, $i++) {
+            if (!isset($thisSitesData['rankSitesInfo'][$i]) || $i >= 10) {
+                break;
+            }
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['rankSitesInfo'][$i]);
+        }
+    }
+
+    // Android Apps Block
+    if (!empty($thisSitesData['androidAppsInfo'])) {
+        for ($column = 'GW', $i = 0; $column != 'HB'; $column++, $i++) {
+            if (!isset($thisSitesData['androidAppsInfo'][$i]) || $i >= 5) {
+                break;
+            }
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['androidAppsInfo'][$i]);
+        }
+    }
+
+    // Apple Apps Block
+    if (!empty($thisSitesData['appleAppsInfo'])) {
+        for ($column = 'HB', $i = 0; $column != 'HG'; $column++, $i++) {
+            if (!isset($thisSitesData['appleAppsInfo'][$i]) || $i >= 5) {
+                break;
+            }
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['appleAppsInfo'][$i]);
         }
     }
 

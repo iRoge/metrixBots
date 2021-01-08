@@ -23,7 +23,9 @@ async function analizeSites() {
         '--no-sandbox',
         '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3312.0 Safari/537.36"',
         '--start-maximized',
-        "--disable-notifications"
+        "--disable-notifications",
+        '--disable-web-security',
+        // '--proxy-server=188.113.190.7:80'
     ];
     const browser = await puppeteer.launch({
         headless: false,
@@ -34,6 +36,10 @@ async function analizeSites() {
         }
     });
     const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(0);
+    page.on('console', msg => {
+        console.log(msg.text());
+    });
 
     const workbook = new xl.Workbook();
     await workbook.xlsx.readFile('file.xlsx');
@@ -51,10 +57,23 @@ async function analizeSites() {
             console.log('Страница ' + worksheet.name + ' не имеет url страницы парсинга');
         }
         await page.goto(urlToParse);
-        await autoScroll(page);
-        page.on('console', msg => {
-            console.log(msg.text());
+        await page.waitForTimeout(1000);
+        let isCaptchaExists = await page.evaluate(() => {
+            let captchaBlock = document.querySelector('div#captcha-app div.g-recaptcha');
+            if (captchaBlock) {
+                return true;
+            } else {
+                return false;
+            }
         });
+
+        if (isCaptchaExists) {
+            console.log(await dealWithRecaptcha(page));
+        }
+
+        return;
+        await autoScroll(page);
+
         collectedData[i-1] = await page.evaluate(() => {
             let rankElement = document.querySelectorAll('.websiteRanks-valueContainer');
             let categoryElement = document.querySelector('li.js-categoryRank a.websiteRanks-nameText');
@@ -248,6 +267,60 @@ async function analizeSites() {
                 }
             }
 
+            let audienceInterestsInfo = [];
+            let audienceInterestsBlocks = document.querySelectorAll('section.audienceCategories ul.audienceCategories-list li.audienceCategories-item');
+            for (let audienceInterestsBlock of audienceInterestsBlocks) {
+                let categoryNameBlock = audienceInterestsBlock.querySelector('a.audienceCategories-itemLink');
+                let categoryName = categoryNameBlock.textContent.trim();
+
+                audienceInterestsInfo.push(categoryName);
+            }
+
+            let alsoVisitedWebsitesInfo = [];
+            let alsoVisitedWebsitesBlocks = document.querySelectorAll('section.alsoVisitedSection div.websitePage-engagementInfo div.websitePage-listUnderline');
+            for (let alsoVisitedWebsitesBlock of alsoVisitedWebsitesBlocks) {
+                let websiteNameBlock = alsoVisitedWebsitesBlock.querySelector('a.websitePage-listItemLink');
+                let websiteName = websiteNameBlock.textContent.trim();
+
+                alsoVisitedWebsitesInfo.push(websiteName);
+            }
+
+            let similarSitesInfo = [];
+            let similarSitesBlocks = document.querySelectorAll('section.similarSitesSection ul.similarSitesList.similarity li.similarSitesList-item');
+            for (let similarSitesBlock of similarSitesBlocks) {
+                let websiteNameBlock = similarSitesBlock.querySelector('a.similarSitesList-title');
+                let websiteName = websiteNameBlock.textContent.trim();
+
+                similarSitesInfo.push(websiteName);
+            }
+
+            let rankSitesInfo = [];
+            let rankSitesBlocks = document.querySelectorAll('section.similarSitesSection ul.similarSitesList.rank li.similarSitesList-item');
+            for (let rankSitesBlock of rankSitesBlocks) {
+                let websiteNameBlock = rankSitesBlock.querySelector('a.similarSitesList-title');
+                let websiteName = websiteNameBlock.textContent.trim();
+
+                rankSitesInfo.push(websiteName);
+            }
+
+            let androidAppsInfo = [];
+            let androidAppsBlocks = document.querySelectorAll('div.websitePage-websiteMobileApps div.google ul.mobileApps-appList li.mobileApps-appItem');
+            for (let androidAppBlock of androidAppsBlocks) {
+                let androidAppNameBlock = androidAppBlock.querySelector('span.mobileApps-appName span');
+                let androidAppName = androidAppNameBlock.textContent.trim();
+
+                androidAppsInfo.push(androidAppName);
+            }
+
+            let appleAppsInfo = [];
+            let appleAppsBlocks = document.querySelectorAll('div.websitePage-websiteMobileApps div.apple ul.mobileApps-appList li.mobileApps-appItem');
+            for (let appleAppBlock of appleAppsBlocks) {
+                let appleAppNameBlock = appleAppBlock.querySelector('span.mobileApps-appName span');
+                let appleAppName = appleAppNameBlock.textContent.trim();
+
+                appleAppsInfo.push(appleAppName);
+            }
+
             return {
                 globalRank: rankElement[0] ? rankElement[0].textContent.trim().replace(',', ' ') : null,
                 countryRank: rankElement[1] ? rankElement[1].textContent.trim().replace(',', ' ') : null,
@@ -266,29 +339,33 @@ async function analizeSites() {
                 countriesInfo: countriesInfo,
                 topReferringSitesInfo: topReferringSitesInfo,
                 topDestinationSitesInfo: topDestinationSitesInfo,
-
                 organicSearchPercent: organicSearchPercent,
                 organicSearchInfo: organicSearchInfo,
                 paidSearchPercent: paidSearchPercent,
                 paidSearchInfo: paidSearchInfo,
                 socialInfo: socialInfo,
+                audienceInterestsInfo: audienceInterestsInfo,
+                alsoVisitedWebsitesInfo: alsoVisitedWebsitesInfo,
+                similarSitesInfo: similarSitesInfo,
+                rankSitesInfo: rankSitesInfo,
+                androidAppsInfo: androidAppsInfo,
+                appleAppsInfo: appleAppsInfo,
             };
         });
-        console.log(collectedData);
-        axios.get('http://localhost:81?' + serialize({collectedData: collectedData})).then(function (response) {
-            console.log(response.data);
-        }).catch(function (error) {
-            console.log(error);
-        });
-        return;
-        console.log(collectedData);
+
+        axios.post('http://localhost:81', serialize({collectedData: collectedData}), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}})
+            .then(function (response) {
+                console.log(response.data);
+            }).catch(function (error) {
+                console.log(error);
+            });
+
         i++;
         console.log(worksheet.name + ' completed!');
         worksheet = workbook.getWorksheet(i);
     }
 
-    await workbook.xlsx.writeFile('file1.xlsx');
-    await console.log('done');
+    await console.log('Done');
 }
 
 function serialize(obj, prefix){
@@ -323,4 +400,62 @@ async function autoScroll(page){
             }, 100);
         });
     });
+}
+
+async function dealWithRecaptcha(page)
+{
+    let sitekey = await page.evaluate(() => {
+        let captchaBlock = document.querySelector('div.g-recaptcha');
+        return captchaBlock.dataset.sitekey;
+    });
+    let data = {
+        key: '695355b02869d2f575b6e89201672a71',
+        googlekey: sitekey,
+        method: 'userrecaptcha',
+        pageurl: page.url(),
+        json: 1,
+    };
+    console.log('Sending request to RuCaptcha...');
+    let response = await axios.get('https://rucaptcha.com/in.php?' + serialize(data), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
+
+    if (response.data.status) {
+        let data = {
+            key: '695355b02869d2f575b6e89201672a71',
+            action: 'get',
+            id: response.data.request,
+            json: 1,
+        };
+        return await new Promise((resolve, reject) => {
+            let timer = setInterval(() => {
+                (async () => {
+                    let response = await axios.get('https://rucaptcha.com/res.php?' + serialize(data), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
+                    console.log(response.data.request);
+                    if (response.data) {
+                        if (response.data.status === 1) {
+                            clearInterval(timer);
+                            await page.evaluate(() => {
+                                let textarea = document.querySelector('div.g-recaptcha textarea[id="g-recaptcha-response"]');
+                                textarea.style = '';
+                            });
+                            await page.type('div.g-recaptcha textarea[id="g-recaptcha-response"]', response.data.request, {delay: 15});
+                            await page.evaluate((code) => {
+                                console.log('CAPCHA CODE ' + code);
+                                handleCaptcha(code);
+                            }, response.data.request);
+                            await resolve();
+                        } else if (response.data.status !== 0) {
+                            await reject();
+                        }
+                    }
+                })();
+            }, 1000)
+        }).then(() => {
+            return true;
+        }).catch(() => {
+            return false;
+        });
+    } else {
+        console.log('При отправке запроса в RuCaptcha произошла ошибка');
+        return false;
+    }
 }
