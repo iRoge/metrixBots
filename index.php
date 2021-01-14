@@ -9,12 +9,21 @@ set_time_limit(1000000);
 
 $collectedData = $_POST['collectedData'];
 
-$spreadsheet = IOFactory::load('file.xlsx');
+$spreadsheet = IOFactory::load('newFile.xlsx');
+
 $heightOfDateRow = 7;
 $startRow = 6;
-$i = 0;
-$worksheet = $spreadsheet->getSheet($i);
-while ($worksheet) {
+foreach ($collectedData as $sheetName => $thisSitesData) {
+    try {
+        $worksheet = $spreadsheet->getSheetByName($sheetName);
+    } catch (\Exception $e) {
+        var_dump($e->getMessage());
+        $currentRow = $startRow;
+        break;
+    }
+    echo 'Заполняем ' . $sheetName . PHP_EOL;
+    echo 'Открыта страница таблицы с ссылкой ' . $worksheet->getCell('C2')->getValue() . PHP_EOL;
+
     $currentRow = $startRow;
     while ($worksheet->getCell('B' . $currentRow)->getValue()) {
         $currentRow += $heightOfDateRow;
@@ -22,7 +31,6 @@ while ($worksheet) {
     if ($currentRow > $startRow) {
         copyRows($worksheet, $currentRow - $heightOfDateRow, $currentRow, 7, 215);
     }
-    $thisSitesData = $collectedData[$i];
 
     // Дата
     $worksheet->setCellValue('B' . $currentRow, date("Y-m-d"));
@@ -52,6 +60,11 @@ while ($worksheet) {
             $worksheet->setCellValue($currentColumn . $currentRow, $thisSitesData['countriesInfo'][strtolower($countryCell->getValue())]['percent']);
             // Country cell difference
             $worksheet->setCellValue((++$currentColumn) . $currentRow, $thisSitesData['countriesInfo'][strtolower($countryCell->getValue())]['difference']);
+            if (!$thisSitesData['countriesInfo'][strtolower($countryCell->getValue())]['direction']) {
+                $worksheet->getStyle($currentColumn . $currentRow)->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_RED);
+            } else {
+                $worksheet->getStyle($currentColumn . $currentRow)->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_GREEN);
+            }
         }
     }
 
@@ -70,27 +83,36 @@ while ($worksheet) {
 
     // Top Referring Sites Block
     if (!empty($thisSitesData['topReferringSitesInfo'])) {
-        for ($column = 'DX', $i = 0; $column != 'EH'; $column++, $column++, $i++) {
-            if (!isset($thisSitesData['topReferringSitesInfo'][$i]) || $i >= 5) {
+        for ($column = 'DX', $n = 0; $column != 'EH'; $column++, $column++, $n++) {
+            if (!isset($thisSitesData['topReferringSitesInfo'][$n]) || $n >= 5) {
                 break;
             }
             $currentColumn = $column;
-            $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$i]['siteName']);
-            $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$i]['difference']);
-            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['topReferringSitesInfo'][$i]['percent']);
-
+            $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$n]['siteName']);
+            $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topReferringSitesInfo'][$n]['difference']);
+            if (!$thisSitesData['topReferringSitesInfo'][$n]['direction']) {
+                $worksheet->getStyle($currentColumn . ($currentRow + 4))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_RED);
+            } else {
+                $worksheet->getStyle($currentColumn . ($currentRow + 4))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_GREEN);
+            }
+            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['topReferringSitesInfo'][$n]['percent']);
         }
     }
     // Top Destination Sites Block
     if (!empty($thisSitesData['topDestinationSitesInfo'])) {
-        for ($column = 'EH', $i = 0; $column != 'ER' || isset($thisSitesData['topDestinationSitesInfo'][$i]) || $i != 5; $column++, $column++, $i++) {
-            if (!isset($thisSitesData['topDestinationSitesInfo'][$i]) || $i >= 5) {
+        for ($column = 'EH', $n = 0; $column != 'ER' || isset($thisSitesData['topDestinationSitesInfo'][$n]) || $n != 5; $column++, $column++, $n++) {
+            if (!isset($thisSitesData['topDestinationSitesInfo'][$n]) || $n >= 5) {
                 break;
             }
             $currentColumn = $column;
-            $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topDestinationSitesInfo'][$i]['siteName']);
-            $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topDestinationSitesInfo'][$i]['difference']);
-            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['topDestinationSitesInfo'][$i]['percent']);
+            $worksheet->setCellValue($column . ($currentRow + 4), $thisSitesData['topDestinationSitesInfo'][$n]['siteName']);
+            $worksheet->setCellValue(++$currentColumn . ($currentRow + 4), $thisSitesData['topDestinationSitesInfo'][$n]['difference']);
+            if (!$thisSitesData['topDestinationSitesInfo'][$n]['direction']) {
+                $worksheet->getStyle($currentColumn . ($currentRow + 4))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_RED);
+            } else {
+                $worksheet->getStyle($currentColumn . ($currentRow + 4))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_GREEN);
+            }
+            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['topDestinationSitesInfo'][$n]['percent']);
         }
     }
 
@@ -98,27 +120,37 @@ while ($worksheet) {
     $worksheet->setCellValue('ER' . ($currentRow + 2), $thisSitesData['organicSearchPercent']);
     // Organic Search Block
     if (!empty($thisSitesData['organicSearchInfo'])) {
-        for ($column = 'ER', $i = 0; $column != 'FB'; $column++, $column++, $i++) {
-            if (!isset($thisSitesData['organicSearchInfo'][$i]) || $i >= 5) {
+        for ($column = 'ER', $n = 0; $column != 'FB'; $column++, $column++, $n++) {
+            if (!isset($thisSitesData['organicSearchInfo'][$n]) || $n >= 5) {
                 break;
             }
             $currentColumn = $column;
-            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['organicSearchInfo'][$i]['searchText']);
-            $worksheet->setCellValue(++$currentColumn . ($currentRow + 5), $thisSitesData['organicSearchInfo'][$i]['difference']);
-            $worksheet->setCellValue($column . ($currentRow + 6), $thisSitesData['organicSearchInfo'][$i]['percent']);
+            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['organicSearchInfo'][$n]['searchText']);
+            $worksheet->setCellValue(++$currentColumn . ($currentRow + 5), $thisSitesData['organicSearchInfo'][$n]['difference']);
+            if (!$thisSitesData['organicSearchInfo'][$n]['direction']) {
+                $worksheet->getStyle($currentColumn . ($currentRow + 5))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_RED);
+            } else {
+                $worksheet->getStyle($currentColumn . ($currentRow + 5))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_GREEN);
+            }
+            $worksheet->setCellValue($column . ($currentRow + 6), $thisSitesData['organicSearchInfo'][$n]['percent']);
         }
     }
 
     // Paid Search Block
     if (!empty($thisSitesData['paidSearchInfo'])) {
-        for ($column = 'FB', $i = 0; $column != 'FL'; $column++, $column++, $i++) {
-            if (!isset($thisSitesData['paidSearchInfo'][$i]) || $i >= 5) {
+        for ($column = 'FB', $n = 0; $column != 'FL'; $column++, $column++, $n++) {
+            if (!isset($thisSitesData['paidSearchInfo'][$n]) || $n >= 5) {
                 break;
             }
             $currentColumn = $column;
-            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['paidSearchInfo'][$i]['searchText']);
-            $worksheet->setCellValue(++$currentColumn . ($currentRow + 5), $thisSitesData['paidSearchInfo'][$i]['difference']);
-            $worksheet->setCellValue($column . ($currentRow + 6), $thisSitesData['paidSearchInfo'][$i]['percent']);
+            $worksheet->setCellValue($column . ($currentRow + 5), $thisSitesData['paidSearchInfo'][$n]['searchText']);
+            $worksheet->setCellValue(++$currentColumn . ($currentRow + 5), $thisSitesData['paidSearchInfo'][$n]['difference']);
+            if (!$thisSitesData['paidSearchInfo'][$n]['direction']) {
+                $worksheet->getStyle($currentColumn . ($currentRow + 5))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_RED);
+            } else {
+                $worksheet->getStyle($currentColumn . ($currentRow + 5))->getFont()->getColor()->setARGB(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_GREEN);
+            }
+            $worksheet->setCellValue($column . ($currentRow + 6), $thisSitesData['paidSearchInfo'][$n]['percent']);
         }
     }
     // Paid Search Percent
@@ -135,77 +167,68 @@ while ($worksheet) {
 
     // Audience Interests Block
     if (!empty($thisSitesData['audienceInterestsInfo'])) {
-        for ($column = 'FS', $i = 0; $column != 'FX'; $column++, $i++) {
-            if (!isset($thisSitesData['audienceInterestsInfo'][$i]) || $i >= 5) {
+        for ($column = 'FS', $n = 0; $column != 'FX'; $column++, $n++) {
+            if (!isset($thisSitesData['audienceInterestsInfo'][$n]) || $n >= 5) {
                 break;
             }
-            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['audienceInterestsInfo'][$i]);
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['audienceInterestsInfo'][$n]);
         }
     }
 
     // Also visited websites Block
     if (!empty($thisSitesData['alsoVisitedWebsitesInfo'])) {
-        for ($column = 'FX', $i = 0; $column != 'GC'; $column++, $i++) {
-            if (!isset($thisSitesData['alsoVisitedWebsitesInfo'][$i]) || $i >= 5) {
+        for ($column = 'FX', $n = 0; $column != 'GC'; $column++, $n++) {
+            if (!isset($thisSitesData['alsoVisitedWebsitesInfo'][$n]) || $n >= 5) {
                 break;
             }
-            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['alsoVisitedWebsitesInfo'][$i]);
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['alsoVisitedWebsitesInfo'][$n]);
         }
     }
 
     // Similarity Block
     if (!empty($thisSitesData['similarSitesInfo'])) {
-        for ($column = 'GC', $i = 0; $column != 'GM'; $column++, $i++) {
-            if (!isset($thisSitesData['similarSitesInfo'][$i]) || $i >= 10) {
+        for ($column = 'GC', $n = 0; $column != 'GM'; $column++, $n++) {
+            if (!isset($thisSitesData['similarSitesInfo'][$n]) || $n >= 10) {
                 break;
             }
-            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['similarSitesInfo'][$i]);
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['similarSitesInfo'][$n]);
         }
     }
 
     // Rank Block
     if (!empty($thisSitesData['rankSitesInfo'])) {
-        for ($column = 'GM', $i = 0; $column != 'GW'; $column++, $i++) {
-            if (!isset($thisSitesData['rankSitesInfo'][$i]) || $i >= 10) {
+        for ($column = 'GM', $n = 0; $column != 'GW'; $column++, $n++) {
+            if (!isset($thisSitesData['rankSitesInfo'][$n]) || $n >= 10) {
                 break;
             }
-            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['rankSitesInfo'][$i]);
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['rankSitesInfo'][$n]);
         }
     }
 
     // Android Apps Block
     if (!empty($thisSitesData['androidAppsInfo'])) {
-        for ($column = 'GW', $i = 0; $column != 'HB'; $column++, $i++) {
-            if (!isset($thisSitesData['androidAppsInfo'][$i]) || $i >= 5) {
+        for ($column = 'GW', $n = 0; $column != 'HB'; $column++, $n++) {
+            if (!isset($thisSitesData['androidAppsInfo'][$n]) || $n >= 5) {
                 break;
             }
-            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['androidAppsInfo'][$i]);
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['androidAppsInfo'][$n]);
         }
     }
 
     // Apple Apps Block
     if (!empty($thisSitesData['appleAppsInfo'])) {
-        for ($column = 'HB', $i = 0; $column != 'HG'; $column++, $i++) {
-            if (!isset($thisSitesData['appleAppsInfo'][$i]) || $i >= 5) {
+        for ($column = 'HB', $n = 0; $column != 'HG'; $column++, $n++) {
+            if (!isset($thisSitesData['appleAppsInfo'][$n]) || $n >= 5) {
                 break;
             }
-            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['appleAppsInfo'][$i]);
+            $worksheet->setCellValue($column . ($currentRow + 1), $thisSitesData['appleAppsInfo'][$n]);
         }
     }
 
-    $i++;
-    try {
-        $worksheet = $spreadsheet->getSheet($i);
-        break;
-    } catch (\Exception $e) {
-        var_dump($e->getMessage());
-        $currentRow = $startRow;
-        break;
-    }
 }
 
-(new Xlsx($spreadsheet))->save('file7.xlsx');
-var_dump('done');
+(new Xlsx($spreadsheet))->save('newFile.xlsx');
+echo 'XLSX CREATED!!!';
 
 function copyRows($sheet,$srcRow,$dstRow,$height,$width) {
     for ($row = 0; $row < $height; $row++) {

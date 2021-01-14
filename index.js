@@ -1,6 +1,7 @@
 const http = require('http');
 const puppeteer = require('puppeteer');
 const xl = require('exceljs');
+const fs = require('fs');
 const axios = require('axios');
 
 const hostname = 'localhost';
@@ -28,7 +29,7 @@ async function analizeSites() {
         // '--proxy-server=188.113.190.7:80'
     ];
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: args,
         defaultViewport: {
             width: 1920,
@@ -37,9 +38,9 @@ async function analizeSites() {
     });
     const page = await browser.newPage();
     await page.setDefaultNavigationTimeout(0);
-    page.on('console', msg => {
-        console.log(msg.text());
-    });
+    // page.on('console', msg => {
+    //     console.log(msg.text());
+    // });
 
     const workbook = new xl.Workbook();
     await workbook.xlsx.readFile('file.xlsx');
@@ -56,6 +57,7 @@ async function analizeSites() {
         if (!urlToParse) {
             console.log('Страница ' + worksheet.name + ' не имеет url страницы парсинга');
         }
+        console.log('Opening ' + urlToParse + ' ...');
         await page.goto(urlToParse);
         await page.waitForTimeout(1000);
         let isCaptchaExists = await page.evaluate(() => {
@@ -68,13 +70,19 @@ async function analizeSites() {
         });
 
         if (isCaptchaExists) {
-            console.log(await dealWithRecaptcha(page));
+            let result = await dealWithRecaptcha(page);
+            if (!result) {
+                console.log('При решении капчи что-то пошло не так');
+                worksheet = workbook.getWorksheet(i);
+                continue;
+            }
         }
-
-        return;
+        await page.waitForSelector('.websiteRanks-valueContainer');
+        console.log('Scrolling page...');
         await autoScroll(page);
 
-        collectedData[i-1] = await page.evaluate(() => {
+        console.log('Parsing data...');
+        collectedData[worksheet.name] = await page.evaluate(() => {
             let rankElement = document.querySelectorAll('.websiteRanks-valueContainer');
             let categoryElement = document.querySelector('li.js-categoryRank a.websiteRanks-nameText');
             let engagementElement = document.querySelectorAll('span.engagementInfo-valueNumber');
@@ -100,19 +108,20 @@ async function analizeSites() {
                 let percentSpan = countryBlock.querySelector('span.traffic-share-valueNumber');
                 let differenceSpan = countryBlock.querySelector('span.websitePage-relativeChangeNumber');
                 let percent = percentSpan ? percentSpan.textContent.trim() : null;
-                let difference = null;
+                let difference = 0;
+                let direction = 1;
 
                 if (differenceSpan) {
+                    difference = differenceSpan.textContent.trim();
                     if (countryBlock.querySelector('span.websitePage-relativeChange--down')) {
-                        difference = '-' + differenceSpan.textContent.trim();
-                    } else {
-                        difference = differenceSpan.textContent.trim();
+                        direction = 0;
                     }
                 }
 
                 countriesInfo[countryName.toLowerCase()] = {
                     percent: percent,
                     difference: difference,
+                    direction: direction
                 }
             }
 
@@ -131,13 +140,13 @@ async function analizeSites() {
                 let differenceSpan = topReferringSitesBlock.querySelector('span.websitePage-relativeChangeNumber');
 
                 let percent = percentSpan ? percentSpan.textContent.trim() : null;
-                let difference = null;
+                let difference = 0;
+                let direction = 1;
 
                 if (differenceSpan) {
-                    if (topReferringSitesBlock.querySelector('div.websitePage-relativeChange--down')) {
-                        difference = '-' + differenceSpan.textContent.trim();
-                    } else {
-                        difference = differenceSpan.textContent.trim();
+                    difference = differenceSpan.textContent.trim();
+                    if (topReferringSitesBlock.querySelector('span.websitePage-relativeChange--down')) {
+                        direction = 0;
                     }
                 }
 
@@ -145,6 +154,7 @@ async function analizeSites() {
                     siteName: siteName,
                     percent: percent,
                     difference: difference,
+                    direction: direction,
                 });
             }
 
@@ -163,13 +173,13 @@ async function analizeSites() {
                 let differenceSpan = topDestinationSitesBlock.querySelector('span.websitePage-relativeChangeNumber');
 
                 let percent = percentSpan ? percentSpan.textContent.trim() : null;
-                let difference = null;
+                let difference = 0;
+                let direction = 1;
 
                 if (differenceSpan) {
-                    if (topDestinationSitesBlock.querySelector('div.websitePage-relativeChange--down')) {
-                        difference = '-' + differenceSpan.textContent.trim();
-                    } else {
-                        difference = differenceSpan.textContent.trim();
+                    difference = differenceSpan.textContent.trim();
+                    if (topDestinationSitesBlock.querySelector('span.websitePage-relativeChange--down')) {
+                        direction = 0;
                     }
                 }
 
@@ -177,6 +187,7 @@ async function analizeSites() {
                     siteName: siteName,
                     percent: percent,
                     difference: difference,
+                    direction: direction,
                 });
             }
 
@@ -197,13 +208,13 @@ async function analizeSites() {
                 let differenceSpan = organicSearchBlock.querySelector('span.websitePage-relativeChangeNumber');
 
                 let percent = percentSpan ? percentSpan.textContent.trim() : null;
-                let difference = null;
+                let difference = 0;
+                let direction = 1;
 
                 if (differenceSpan) {
+                    difference = differenceSpan.textContent.trim();
                     if (organicSearchBlock.querySelector('span.websitePage-relativeChange--down')) {
-                        difference = '-' + differenceSpan.textContent.trim();
-                    } else {
-                        difference = differenceSpan.textContent.trim();
+                        direction = 0;
                     }
                 }
 
@@ -211,6 +222,7 @@ async function analizeSites() {
                     searchText: searchText,
                     percent: percent,
                     difference: difference,
+                    direction: direction
                 });
             }
 
@@ -231,13 +243,13 @@ async function analizeSites() {
                 let differenceSpan = paidSearchBlock.querySelector('span.websitePage-relativeChangeNumber');
 
                 let percent = percentSpan ? percentSpan.textContent.trim() : null;
-                let difference = null;
+                let difference = 0;
+                let direction = 1;
 
                 if (differenceSpan) {
+                    difference = differenceSpan.textContent.trim();
                     if (paidSearchBlock.querySelector('span.websitePage-relativeChange--down')) {
-                        difference = '-' + differenceSpan.textContent.trim();
-                    } else {
-                        difference = differenceSpan.textContent.trim();
+                        direction = 0;
                     }
                 }
 
@@ -245,6 +257,7 @@ async function analizeSites() {
                     searchText: searchText,
                     percent: percent,
                     difference: difference,
+                    direction: direction
                 });
             }
 
@@ -352,23 +365,35 @@ async function analizeSites() {
                 appleAppsInfo: appleAppsInfo,
             };
         });
-
-        axios.post('http://localhost:81', serialize({collectedData: collectedData}), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}})
-            .then(function (response) {
-                console.log(response.data);
-            }).catch(function (error) {
-                console.log(error);
-            });
+        console.log(worksheet.name + ' completed!');
+        console.log(collectedData[worksheet.name]['globalRank'].toString());
+        console.log('');
 
         i++;
-        console.log(worksheet.name + ' completed!');
         worksheet = workbook.getWorksheet(i);
     }
 
-    await console.log('Done');
+    await fs.writeFile('collectedData.txt', serialize(collectedData), function(err) {
+        if (err) {
+            console.log(`${err}`);
+        } else {
+            console.log('Данные записаны в файл');
+        }
+    });
+
+    console.log('Sending request to create new rows...');
+    await axios.post('http://localhost:81', serialize({collectedData: collectedData}), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}})
+        .then(function (response) {
+            console.log(response.data);
+        }).catch(function (error) {
+            console.log(error);
+        });
+
+    await console.log('Done!!!');
 }
 
-function serialize(obj, prefix){
+function serialize(obj, prefix)
+{
     var str = [],
         p;
     for (p in obj) {
@@ -383,8 +408,9 @@ function serialize(obj, prefix){
     return str.join("&");
 }
 
-async function autoScroll(page){
-    await page.evaluate(async () => {
+async function autoScroll(page)
+{
+    return await page.evaluate(async () => {
         await new Promise((resolve, reject) => {
             var totalHeight = 0;
             var distance = 100;
@@ -397,7 +423,7 @@ async function autoScroll(page){
                     clearInterval(timer);
                     resolve();
                 }
-            }, 100);
+            }, 55);
         });
     });
 }
@@ -429,7 +455,6 @@ async function dealWithRecaptcha(page)
             let timer = setInterval(() => {
                 (async () => {
                     let response = await axios.get('https://rucaptcha.com/res.php?' + serialize(data), {headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
-                    console.log(response.data.request);
                     if (response.data) {
                         if (response.data.status === 1) {
                             clearInterval(timer);
@@ -439,9 +464,19 @@ async function dealWithRecaptcha(page)
                             });
                             await page.type('div.g-recaptcha textarea[id="g-recaptcha-response"]', response.data.request, {delay: 15});
                             await page.evaluate((code) => {
-                                console.log('CAPCHA CODE ' + code);
-                                handleCaptcha(code);
+                                let textarea = document.querySelector('div.g-recaptcha textarea[id="g-recaptcha-response"]');
+                                let input = document.createElement('input');
+                                input.setAttribute('type', 'button');
+                                input.setAttribute('id', 'handleCaptcha');
+                                input.setAttribute('onclick', 'handleCaptcha("' + code + '")');
+                                input.style.width = 400;
+                                input.style.height = 400;
+                                input.style.position = 'absolute';
+                                input.style.zIndex = 100000;
+                                textarea.after(input, textarea);
+                                // handleCaptcha(code);
                             }, response.data.request);
+                            await page.click('input[id=handleCaptcha]');
                             await resolve();
                         } else if (response.data.status !== 0) {
                             await reject();
