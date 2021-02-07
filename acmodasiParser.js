@@ -51,7 +51,7 @@ async function analizeSites() {
     await page.setCookie(
         {
             "name": "acmodasi",
-            "value": "0280b176042078360ebaf0a7aa43830f",
+            "value": "c059daf7e26701544367604373902583",
             "domain": "www.acmodasi.ru",
             "path": "/",
             "expires": 1633622615.629729,
@@ -61,7 +61,7 @@ async function analizeSites() {
         }
     );
 
-    for (let i = 10, row = 1; i <= countOfPages; i++) {
+    for (let i = 1, row = 1; i <= countOfPages; i++) {
         await page.goto('https://www.acmodasi.ru/index.php?action=search&todo=advanced&base=&un=&vo=4&vd=17&pvo=&pvd=&us=0&uc=&c=219&eda=0&ac=0&edm=0&mo=0&edd=0&da=0&eds=0&si=0&bt=&et=&hf=&ht=&wf=&wt=&hc=0&lf=0&lt=0&eye=0&cf=&ct=&sf=&st=&pp=3&on=1&sp=0&id=0&ph=0&p=' + i);
 
         let ankets = await page.$$('.user_card_image_box');
@@ -115,7 +115,6 @@ async function analizeSites() {
             await page.waitForTimeout(1000);
         }
         await console.log('Page number ' + i + ' completed!');
-        break;
     }
     await workbook.xlsx.writeFile('acmodasi.xlsx');
 
