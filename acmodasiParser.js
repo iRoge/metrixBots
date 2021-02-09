@@ -37,21 +37,25 @@ async function analizeSites() {
         }
     });
     const page = await browser.newPage();
-    const countOfPages = 68;
+    const countOfPages = 290;
     await page.setDefaultNavigationTimeout(0);
 
     // page.on('console', msg => {
     //     console.log(msg.text());
     // });
 
-    const workbook = new xl.Workbook();
-    await workbook.xlsx.readFile('acmodasi.xlsx');
-    let worksheet = workbook.getWorksheet(1);
+    // const workbook = new xl.Workbook();
+    // await workbook.xlsx.readFile('acmodasi.xlsx');
+    // let worksheet = workbook.getWorksheet(1);
+    let cookieValues = [
+        "0280b176042078360ebaf0a7aa43830f",// old
+        "c059daf7e26701544367604373902583" // new
+    ];
 
     await page.setCookie(
         {
             "name": "acmodasi",
-            "value": "c059daf7e26701544367604373902583",
+            "value": cookieValues[0],
             "domain": "www.acmodasi.ru",
             "path": "/",
             "expires": 1633622615.629729,
@@ -61,15 +65,20 @@ async function analizeSites() {
         }
     );
 
-    for (let i = 1, row = 1; i <= countOfPages; i++) {
-        await page.goto('https://www.acmodasi.ru/index.php?action=search&todo=advanced&base=&un=&vo=4&vd=17&pvo=&pvd=&us=0&uc=&c=219&eda=0&ac=0&edm=0&mo=0&edd=0&da=0&eds=0&si=0&bt=&et=&hf=&ht=&wf=&wt=&hc=0&lf=0&lt=0&eye=0&cf=&ct=&sf=&st=&pp=3&on=1&sp=0&id=0&ph=0&p=' + i);
+    main:for (let i = 24, row = 1, number = 1, cookieValueKey = 0; i <= countOfPages; i++) {
+        await page.goto('https://www.acmodasi.ru/index.php?action=search&todo=advanced&base=&un=&vo=0&vd=17&pvo=&pvd=&us=0&uc=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&c=219&eda=0&ac=0&edm=0&mo=0&edd=0&da=0&eds=0&si=2&bt=&et=&hf=&ht=&wf=&wt=&hc=0&lf=0&lt=0&eye=0&cf=&ct=&sf=&st=&pp=3&on=0&sp=0&id=0&ph=0&p=' + i);
 
         let ankets = await page.$$('.user_card_image_box');
         for (let anket of ankets) {
             await anket.click();
-            await page.waitForTimeout(2000);
+            await page.waitForTimeout(1000);
             let child = {};
             let tabContent = await page.$('#pills-tabContent .col-md-6.col-sm-12.mt-4');
+            if (!tabContent) {
+                await page.click('div.modal-footer button.btn');
+                await page.waitForTimeout(500);
+                continue;
+            }
             child['name'] = await tabContent.$$eval('div.row', (elements) => {
                 for (let e of elements) {
                     let propName = e.querySelector('div.table_label').innerHTML;
@@ -78,64 +87,118 @@ async function analizeSites() {
                     }
                 }
             });
-            child['gender'] = await tabContent.$$eval('div.row', (elements) => {
-                for (let e of elements) {
-                    let propName = e.querySelector('div.table_label').innerHTML;
-                    if (propName === 'Пол') {
-                        return e.querySelector('div.table_value').innerHTML;
-                    }
-                }
-            });
-            await page.click('#p_contacts');
-            await page.waitForTimeout(1000);
+            // child['gender'] = await tabContent.$$eval('div.row', (elements) => {
+            //     for (let e of elements) {
+            //         let propName = e.querySelector('div.table_label').innerHTML;
+            //         if (propName === 'Пол') {
+            //             return e.querySelector('div.table_value').innerHTML;
+            //         }
+            //     }
+            // });
+            // await page.click('#p_contacts');
+            // await page.waitForTimeout(1000);
+            //
+            // if (await page.evaluate(() => { return !!document.getElementById("show_contact_buton") })) {
+            //     await page.click('#show_contact_buton');
+            // }
+            //
+            // if (await page.evaluate(() => { return !!document.querySelector("#user_contacts .btn.green_button") })) {
+            //     await page.click('#user_contacts .btn.green_button');
+            // }
+            //
+            // await page.waitForTimeout(500);
+            // let contactRows = await page.$$('div#user_contacts div.row');
+            // let checker = false;
+            // for (let contactRow of contactRows) {
+            //     let nameOfService = await contactRow.$eval('div.table_label', (e) => e.innerHTML);
+            //     if (nameOfService === 'Whatsapp' || nameOfService === 'Телефон:' || nameOfService === 'Viber') {
+            //         checker = true;
+            //         break;
+            //     }
+            // }
+            // if (!checker) {
+            //     await page.click('div.modal-footer button.btn');
+            //     await page.waitForTimeout(1000);
+            //     continue;
+            // }
+            // contactRows = await page.$$('div#user_contacts div.row');
+            // child['phone'] = null;
+            // child['email'] = null;
+            // for (let contactRow of contactRows) {
+            //     let nameOfService = await contactRow.$eval('div.table_label', (e) => e.innerHTML);
+            //     if (nameOfService === 'Whatsapp' || nameOfService === 'Телефон:' || nameOfService === 'Viber') {
+            //         child['phone'] = await (await contactRow.$eval('div.table_value', (e) => e.innerHTML)).replace(/\s|\(|\)|-/g, '');
+            //         break;
+            //     }
+            // }
+            // if (child.hasOwnProperty('name') && child.hasOwnProperty('gender') && child.hasOwnProperty('phone')) {
+            //     worksheet.getCell(row, 1).value = child['name'];
+            //     worksheet.getCell(row, 2).value = child['phone'];
+            //     worksheet.getCell(row, 3).value = child['gender'];
+            // }
+            // row++;
 
-            if (await page.evaluate(() => { return !!document.getElementById("show_contact_buton") })) {
-                await page.click('#show_contact_buton');
+            let startChatButton = await page.$('#Capa_1');
+            if (!startChatButton) {
+                await page.click('div.modal-footer button.btn');
+                await page.waitForTimeout(500);
+                continue;
+            }
+            await startChatButton.click();
+            await page.waitForTimeout(500);
+            await page.type('textarea#inputtext', 'Приглашаем молодого музыканта на конкурс. Подробности: kidfest.ru')
+            await page.click('#replyform input.btn.orange_button.mt-2');
+            await page.waitForTimeout(500);
+            await page.click('#modal_window div.modal-footer button.btn.green_button');
+            await page.waitForTimeout(500);
+            await page.click('div.modal-footer button.btn');
+            await console.log('Child ' + child['name'] + ' completed!');
+            number++;
+            if (number >= 200) {
+                cookieValueKey++;
+                if (typeof cookieValues[cookieValueKey] == "undefined" || cookieValues[cookieValueKey] == null) {
+                    console.log('No accounts left for today =(');
+                    break main;
+                }
+                await page.setCookie(
+                    {
+                        "name": "acmodasi",
+                        "value": cookieValues[cookieValueKey],
+                        "domain": "www.acmodasi.ru",
+                        "path": "/",
+                        "expires": 1633622615.629729,
+                        "httpOnly": false,
+                        "secure": false,
+                        "session": false,
+                    }
+                );
+                number = 0;
+                break;
             }
             await page.waitForTimeout(500);
-            let contactRows = await page.$$('div#user_contacts div.row');
-            child['phone'] = null;
-            for (let contactRow of contactRows) {
-                let nameOfService = await contactRow.$eval('div.table_label', (e) => e.innerHTML);
-                if (nameOfService === 'Whatsapp' || nameOfService === 'Телефон:' || nameOfService === 'Viber') {
-                    child['phone'] = await (await contactRow.$eval('div.table_value a', (e) => e.innerHTML)).replace(/\s|\(|\)|-/g, '');
-                    break;
-                }
-            }
-            if (child.hasOwnProperty('name') && child.hasOwnProperty('gender') && child.hasOwnProperty('phone')) {
-                worksheet.getCell(row, 1).value = child['name'];
-                worksheet.getCell(row, 2).value = child['phone'];
-                worksheet.getCell(row, 3).value = child['gender'];
-            }
-            row++;
-            // let form = page.$eval('form input.btn.orange_button.mt-2[type=submit]', (e) => e.parentElement);
-            // await form.type('textarea.form-control', 'Приглашаем молодого музыканта на конкурс. Подробности: kidfest.ru');
-            // await form.click('textarea.form-control');
-            await page.click('div.modal-footer button.btn');
-            await page.waitForTimeout(1000);
         }
         await console.log('Page number ' + i + ' completed!');
     }
-    await workbook.xlsx.writeFile('acmodasi.xlsx');
-
-    await fs.readFile("./acmodasi.xlsx", function (err, data) {
-        let transporter = mailer.createTransport({
-            host: 'smtp.yandex.ru',
-            port: 465,
-            secure: true,
-            auth: {
-                user: 'iroge-27@yandex.ru',
-                pass: 'V04@r70n1V'
-            }
-        });
-        transporter.sendMail({
-            sender: 'iroge-27@yandex.ru',
-            to: 'iroge-27@yandex.ru',
-            subject: 'Данные acmodasi',
-            body: '',
-            attachments: [{'filename': 'acmodasi.xlsx', 'content': data}]
-        });
-    });
+    // await workbook.xlsx.writeFile('acmodasi.xlsx');
+    //
+    // await fs.readFile("./acmodasi.xlsx", function (err, data) {
+    //     let transporter = mailer.createTransport({
+    //         host: 'smtp.yandex.ru',
+    //         port: 465,
+    //         secure: true,
+    //         auth: {
+    //             user: 'iroge-27@yandex.ru',
+    //             pass: 'V04@r70n1V'
+    //         }
+    //     });
+    //     transporter.sendMail({
+    //         sender: 'iroge-27@yandex.ru',
+    //         to: 'iroge-27@yandex.ru',
+    //         subject: 'Данные acmodasi',
+    //         body: '',
+    //         attachments: [{'filename': 'acmodasi.xlsx', 'content': data}]
+    //     });
+    // });
 }
 
 function serialize(obj, prefix)
